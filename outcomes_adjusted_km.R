@@ -10,17 +10,17 @@ library(ggplot2)
 
 ### LINKING
 # Load models for inference
-outcomes_set <- fread(file='/data/arrhythmia/skhurshid/vo2/01-24-2022_c3po_pclr_infer_MGB-c3po_last_stfu_ecg.tsv')
+outcomes_set <- fread(file='01-24-2022_c3po_pclr_infer_MGB-c3po_last_stfu_ecg.tsv')
 outcomes_mgh <- outcomes_set[s3_path=='ecg_mgh_hd5s']
 outcomes_bwh <- outcomes_set[s3_path=='ecg_bwh_hd5s']
 
 # Load phenotype files
-wide <- fread(file='/data/cvrepo/hf-wide-files/hf-wide-2021-05-08.tsv')
-af <- fread(file='/data/cvrepo/skhurshid/custom_wides/wide_with_af_051021.csv')
-mi <- fread(file='/data/cvrepo/skhurshid/custom_wides/wide_with_mi_stroke_051021.csv')
+wide <- fread(file='hf-wide-2021-05-08.tsv')
+af <- fread(file='wide_with_af_051021.csv')
+mi <- fread(file='wide_with_mi_stroke_051021.csv')
 
 # Load linker
-linker <- fread(file='/data/arrhythmia_source/data/2020_loyalty/linker_id/latest_linkers/mgh_bwh_mrn_empi_linker.txt')
+linker <- fread(file='mgh_bwh_mrn_empi_linker.txt')
 bwh_linker <- linker[Hospital=='BWH']
 mgh_linker <- linker[Hospital=='MGH']
 
@@ -61,9 +61,9 @@ for (j in numerics){set(wide,j=j,value=as.numeric(wide[[j]]))}
 
 # Harmonize units and QC
 ## Wt
-wide[start_fu_Weight_units %in% c('pound','Pounds','Lbs/Oz',''),wt_kg := start_fu_Weight/2.2] # Pounds assumption if not hg
+wide[start_fu_Weight_units %in% c('pound','Pounds','Lbs/Oz',''),wt_kg := start_fu_Weight/2.2] # Pounds assumption if not kg
 wide[start_fu_Weight_units %in% c('Kilograms','kg'),wt_kg := start_fu_Weight]
-wide[c(wt_kg < 20 | wt_kg > 450), wt_kg := NA] # ultimately 127988 NAs (~ 200 due to QC)
+wide[c(wt_kg < 20 | wt_kg > 450), wt_kg := NA] # ultimately 127988 NAs
 wide[,id := as.numeric(id)]
 
 ## Ht
@@ -71,7 +71,7 @@ wide[c(start_fu_Height_units %in% c('Inches','inch')),ht_cm := as.numeric(start_
 wide[c((start_fu_Height_units=='') | is.na(start_fu_Height_units)),ht_cm := as.numeric(str_detect(start_fu_Height,'\\d+'))*2.54]
 wide[start_fu_Height_units %in% c('Centimeters','cm'),ht_cm := as.numeric(start_fu_Height)]
 wide[start_fu_Height_units=='Feet',ht_cm := ((as.numeric(start_fu_Height)/12)*2.54)]
-wide[c(ht_cm < 91 | ht_cm > 305), ht_cm := NA] # ultimately 76409 NAs remain (~ 1800 due to)
+wide[c(ht_cm < 91 | ht_cm > 305), ht_cm := NA] # ultimately 76409 NAs remain
 wide[,id := as.numeric(id)]
 
 ## Remove outliers in BMI prior to ht/wt recovery
@@ -114,7 +114,7 @@ outcomes_set[wide,':='(age = i.start_fu/365.25, sex = ifelse(i.Dem.Gender.no_fil
 outcomes_set <- outcomes_set[!is.na(bmi) & !is.na(ht) & !is.na(wt)] # 119861 - 34184 = 85677
 
 # Remove in CPET dataset
-not_holdout <- fread(file='/data/arrhythmia/skhurshid/vo2/not_holdout_021822.csv')
+not_holdout <- fread(file='not_holdout_021822.csv')
 setkey(not_holdout,MRN)
 not_holdout[mgh_linker,linker_id := i.LINKER_ID]
 outcomes_set <- outcomes_set[!(linker_id %in% not_holdout$linker_id)] # 85677 - 252 = 85425
@@ -154,8 +154,8 @@ outcomes_set[,':='(time_to_death = ifelse(death == 1,(death_age - start_fu)/365.
                                                (death_age-start_fu),na.rm=T)/365.25))]
 
 #### INFERENCE
-load('/data/arrhythmia/skhurshid/vo2/lm_pclr_basic.RData')
-load('/data/arrhythmia/skhurshid/vo2/cv.lm_pclr_basic.RData')
+load('lm_pclr_basic.RData')
+load('cv.lm_pclr_basic.RData')
 
 # Generate X matrices
 # Define variable space
@@ -213,7 +213,7 @@ ggplot() + geom_density(data=death_set,aes(x=death_set$pclr_basic_fitted),fill="
         axis.title.y = element_text(size=20,margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(size=20),legend.text=element_text(size=20)) +
   labs(x='Predicted Peak VO2 (mL/kg/min)',y='Density') 
-ggsave('/data/arrhythmia/skhurshid/vo2/mgb_predicted_vo2_density.pdf',
+ggsave('mgb_predicted_vo2_density.pdf',
        height=2,width=2.5,units='in',scale=4)
 
 # Models
@@ -242,7 +242,7 @@ af_set[,vo2_graphical := factor(ifelse(vo2_less10pct==1,'Below','At/Above'),leve
 mod_af <- prodlim(Hist(time_to_af,incd_af)~vo2_graphical,data=af_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_af_less10.pdf',height=3,width=3.7,
+CairoPDF(file='km_af_less10.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_af,"cuminc",ylim=c(0,0.40),xlim=c(0,10), # Remove cuminc if you want survival
@@ -269,7 +269,7 @@ mi_set[,vo2_graphical := factor(ifelse(vo2_less10pct==1,'Below','At/Above'),leve
 mod_mi <- prodlim(Hist(time_to_mi,incd_mi)~vo2_graphical,data=mi_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_mi_less10.pdf',height=3,width=3.7,
+CairoPDF(file='km_mi_less10.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_mi,"cuminc",ylim=c(0,0.20),xlim=c(0,10), # Remove cuminc if you want survival
@@ -296,7 +296,7 @@ hf_set[,vo2_graphical := factor(ifelse(vo2_less10pct==1,'Below','At/Above'),leve
 mod_hf <- prodlim(Hist(time_to_hf,incd_hf)~vo2_graphical,data=hf_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_hf_less10.pdf',height=3,width=3.7,
+CairoPDF(file='km_hf_less10.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_hf,"cuminc",ylim=c(0,0.40),xlim=c(0,10), # Remove cuminc if you want survival
@@ -323,7 +323,7 @@ death_set[,vo2_graphical := factor(ifelse(vo2_less10pct==1,'Below','At/Above'),l
 mod_death <- prodlim(Hist(time_to_death,incd_death)~vo2_graphical,data=death_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_death_less10.pdf',height=3,width=3.7,
+CairoPDF(file='km_death_less10.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_death,"cuminc",ylim=c(0,0.40),xlim=c(0,10), # Remove cuminc if you want survival
@@ -351,7 +351,7 @@ af_set[,vo2_graphical := factor(ifelse(vo2_less14==1,'Below','At/Above'),levels=
 mod_af <- prodlim(Hist(time_to_af,incd_af)~vo2_graphical,data=af_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_af_less14.pdf',height=3,width=3.7,
+CairoPDF(file='km_af_less14.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_af,"cuminc",ylim=c(0,0.40),xlim=c(0,10), # Remove cuminc if you want survival
@@ -378,7 +378,7 @@ mi_set[,vo2_graphical := factor(ifelse(vo2_less14==1,'Below','At/Above'),levels=
 mod_mi <- prodlim(Hist(time_to_mi,incd_mi)~vo2_graphical,data=mi_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_mi_less14.pdf',height=3,width=3.7,
+CairoPDF(file='km_mi_less14.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_mi,"cuminc",ylim=c(0,0.20),xlim=c(0,10), # Remove cuminc if you want survival
@@ -405,7 +405,7 @@ hf_set[,vo2_graphical := factor(ifelse(vo2_less14==1,'Below','At/Above'),levels=
 mod_hf <- prodlim(Hist(time_to_hf,incd_hf)~vo2_graphical,data=hf_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_hf_less14.pdf',height=3,width=3.7,
+CairoPDF(file='km_hf_less14.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_hf,"cuminc",ylim=c(0,0.40),xlim=c(0,10), # Remove cuminc if you want survival
@@ -432,7 +432,7 @@ death_set[,vo2_graphical := factor(ifelse(vo2_less14==1,'Below','At/Above'),leve
 mod_death <- prodlim(Hist(time_to_death,incd_death)~vo2_graphical,data=death_set)
 
 # Plot
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_death_less14.pdf',height=3,width=3.7,
+CairoPDF(file='km_death_less14.pdf',height=3,width=3.7,
          pointsize=5)
 par(oma=c(3,1,1,1),mar=c(4,2,1,1))
 plot(mod_death,"cuminc",ylim=c(0,0.40),xlim=c(0,10), # Remove cuminc if you want survival
@@ -550,7 +550,7 @@ weights <- data.frame(vo2_graphical = levels(af_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_af,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_af_less10_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_af_less10_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -576,7 +576,7 @@ weights2 <- data.frame(vo2_graphical = levels(af_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_af,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_af_less10_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_af_less10_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -606,7 +606,7 @@ weights2 <- data.frame(vo2_graphical = levels(mi_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_mi,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_mi_less10_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_mi_less10_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -632,7 +632,7 @@ weights2 <- data.frame(vo2_graphical = levels(mi_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_mi,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_mi_less10_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_mi_less10_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -662,7 +662,7 @@ weights2 <- data.frame(vo2_graphical = levels(hf_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_hf,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_hf_less10_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_hf_less10_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -688,7 +688,7 @@ weights2 <- data.frame(vo2_graphical = levels(hf_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_hf,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_hf_less10_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_hf_less10_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -718,7 +718,7 @@ weights2 <- data.frame(vo2_graphical = levels(death_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_death,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_death_less10_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_death_less10_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -744,7 +744,7 @@ weights2 <- data.frame(vo2_graphical = levels(death_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_death,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_death_less10_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_death_less10_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -775,7 +775,7 @@ weights <- data.frame(vo2_graphical = levels(af_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_af,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_af_less14_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_af_less14_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -801,7 +801,7 @@ weights2 <- data.frame(vo2_graphical = levels(af_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_af,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_af_less14_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_af_less14_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -831,7 +831,7 @@ weights2 <- data.frame(vo2_graphical = levels(mi_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_mi,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_mi_less14_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_mi_less14_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -857,7 +857,7 @@ weights2 <- data.frame(vo2_graphical = levels(mi_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_mi,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_mi_less14_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_mi_less14_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -887,7 +887,7 @@ weights2 <- data.frame(vo2_graphical = levels(hf_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_hf,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_hf_less14_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_hf_less14_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -913,7 +913,7 @@ weights2 <- data.frame(vo2_graphical = levels(hf_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_hf,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_hf_less14_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_hf_less14_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -943,7 +943,7 @@ weights2 <- data.frame(vo2_graphical = levels(death_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_death,newdata=weights)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_death_less14_adjusted_f.pdf',height=3,width=3.5,
+CairoPDF(file='km_death_less14_adjusted_f.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),
@@ -969,7 +969,7 @@ weights2 <- data.frame(vo2_graphical = levels(death_set$vo2_graphical),
 # Plot
 fit <- survfit(mod_death,newdata=weights2)
 
-CairoPDF(file='/data/arrhythmia/skhurshid/vo2/km_death_less14_adjusted_m.pdf',height=3,width=3.5,
+CairoPDF(file='km_death_less14_adjusted_m.pdf',height=3,width=3.5,
          pointsize=6)
 par(oma=c(3,4,1,1),mar=c(3,4,1,1))
 plot(fit,fun=function(x) 1-x,ylim=c(0,0.25),xlim=c(0,10),

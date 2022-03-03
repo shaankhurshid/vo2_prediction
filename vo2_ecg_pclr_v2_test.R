@@ -12,12 +12,13 @@ library(nricens)
 source('vo2_functions.R')
 
 ####### PARAMS
+# Alphas previously determined for each model to have best performance in eval set
 set_alpha <- 1
 set_alpha2 <- 0.5
 
 ######## STEP 1: Pre-processing
 # Load ECG / PCLR data
-cpet_pclr <- fread(file='/data/arrhythmia/skhurshid/vo2/01-03-2022_c3po_pclr_infer_cpet.csv')
+cpet_pclr <- fread(file='01-03-2022_c3po_pclr_infer_cpet.csv')
 
 # Friendly names
 ## CPET ECG
@@ -74,7 +75,7 @@ ggplot() + geom_histogram(data=cpet_pclr,aes(x=cpet_pclr$cpet_to_ecg),
         axis.title.y = element_text(size=20,margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(size=20),legend.text=element_text(size=20)) +
   labs(x=expression(paste("Days from CPET to ECG")),y='Count')
-ggsave(filename='/data/arrhythmia/skhurshid/vo2/days_cpet_to_ecg.pdf',height=1.8,width=2.53,
+ggsave(filename='days_cpet_to_ecg.pdf',height=1.8,width=2.53,
        scale=4,device='pdf')
 
 # Plot density of true VO2
@@ -86,14 +87,14 @@ ggplot() + geom_density(data=cpet_pclr,aes(x=cpet_pclr$vo2),fill="#2c7fb8",alpha
         axis.title.y = element_text(size=20,margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(size=20),legend.text=element_text(size=20)) +
   labs(x='Peak VO2 (mL/kg/min)',y='Density') 
-ggsave('/data/arrhythmia/skhurshid/vo2/all_true_vo2_density.pdf',
+ggsave('all_true_vo2_density.pdf',
        height=2,width=2.5,units='in',scale=4)
 
 # Save out analysis set
-#write.csv(cpet_pclr,file='/data/arrhythmia/skhurshid/vo2/cpet_pclr_021822.csv',row.names=F)
+#write.csv(cpet_pclr,file='cpet_pclr_021822.csv',row.names=F)
 
 # Isolate original holdout set
-holdout <- fread(file='/data/arrhythmia/skhurshid/vo2/holdout.csv')
+holdout <- fread(file='holdout.csv')
 not_holdout <- cpet_pclr[!(MRN %in% holdout$MRN)]
 holdout <- cpet_pclr[(MRN %in% holdout$MRN)]
 
@@ -104,7 +105,7 @@ train <- not_holdout[sample_var <= 0.75]
 test <- not_holdout[sample_var > 0.75]
 
 # Save out not holdout
-#write.csv(not_holdout,file='/data/arrhythmia/skhurshid/vo2/not_holdout_021822.csv',row.names=F)
+#write.csv(not_holdout,file='not_holdout_021822.csv',row.names=F)
 
 # Generate X matrices
 # Define variable space
@@ -182,15 +183,15 @@ holdout[,pclr_basic_fitted := predict(lm_pclr_basic,cv.lm_pclr_basic$lambda.min,
 vo2 <- compare_linear_vo2(data=holdout,truth='vo2',
                       inference=c('basic_fitted','ecg_basic_fitted',
                                   'pclr_fitted','pclr_basic_fitted'),
-                      out_path='/data/arrhythmia/skhurshid/vo2/',plot=TRUE,write_out=TRUE,
+                      out_path='',plot=TRUE,write_out=TRUE,
                       indicator='vo2_alpha1_holdout')
 
 pclr_v_ecg <- cocor(formula = ~ vo2 + ecg_basic_fitted | vo2 + pclr_basic_fitted,
                     data=holdout)
 
 # Save out models
-# save(lm_pclr_basic,file='/data/arrhythmia/skhurshid/vo2/lm_pclr_basic.RData')
-# save(cv.lm_pclr_basic,file='/data/arrhythmia/skhurshid/vo2/cv.lm_pclr_basic.RData')
+# save(lm_pclr_basic,file='lm_pclr_basic.RData')
+# save(cv.lm_pclr_basic,file='cv.lm_pclr_basic.RData')
 
 # MAE bootstrap
 boot_mae <- ci_mae(y='vo2',x1='basic_fitted',
@@ -217,7 +218,7 @@ p <- 2*(1-pnorm(abs(z)))
 
 # Targeted Plots
 ### BASIC
-pdf(file='/data/arrhythmia/skhurshid/vo2/basic_vo2_holdout.pdf',height=4,width=4,pointsize=5)
+pdf(file='basic_vo2_holdout.pdf',height=4,width=4,pointsize=5)
 par(mar=c(5,5,2,2),oma=c(1,1,1,1))
 plot(x=holdout$basic_fitted,y=holdout$vo2,
      xaxt='n',yaxt='n',xlab='',ylab='',bty='n',xlim=c(0,80),ylim=c(0,80),
@@ -230,7 +231,7 @@ segments(-0.1,-0.1,81,81,lty=5)
 dev.off()
 
 ### ECG BASIC
-pdf(file='/data/arrhythmia/skhurshid/vo2/ecg_basic_vo2_holdout.pdf',height=4,width=4,pointsize=5)
+pdf(file='ecg_basic_vo2_holdout.pdf',height=4,width=4,pointsize=5)
 par(mar=c(5,5,2,2),oma=c(1,1,1,1))
 plot(x=holdout$ecg_basic_fitted,y=holdout$vo2,
      xaxt='n',yaxt='n',xlab='',ylab='',bty='n',xlim=c(0,80),ylim=c(0,80),
@@ -243,7 +244,7 @@ segments(-0.1,-0.1,81,81,lty=5)
 dev.off()
 
 ### PCLR
-pdf(file='/data/arrhythmia/skhurshid/vo2/pclr_basic_vo2_holdout.pdf',height=4,width=4,pointsize=5)
+pdf(file='pclr_basic_vo2_holdout.pdf',height=4,width=4,pointsize=5)
 par(mar=c(5,5,2,2),oma=c(1,1,1,1))
 plot(x=holdout$pclr_basic_fitted,y=holdout$vo2,
      xaxt='n',yaxt='n',xlab='',ylab='',bty='n',xlim=c(0,80),ylim=c(0,80),
@@ -261,7 +262,7 @@ holdout[,mean_pair := apply(.SD,FUN=mean,MARGIN=1),.SDcols=c('vo2','basic_fitted
 holdout[,diff_pair := vo2 - basic_fitted]
 setkey(holdout,mean_pair)
 
-png('/data/arrhythmia/skhurshid/vo2/ba_vo2_basic.png',pointsize=6,res=300,
+png('ba_vo2_basic.png',pointsize=6,res=300,
     height=1200,width=1200)
 par(oma=c(1,1,1,1))
 par(mar=c(4,3,1,1))
@@ -299,7 +300,7 @@ holdout[,mean_pair := apply(.SD,FUN=mean,MARGIN=1),.SDcols=c('vo2','ecg_basic_fi
 holdout[,diff_pair := vo2 - ecg_basic_fitted]
 setkey(holdout,mean_pair)
 
-png('/data/arrhythmia/skhurshid/vo2/ba_vo2_ecg_basic.png',pointsize=6,res=300,
+png('ba_vo2_ecg_basic.png',pointsize=6,res=300,
     height=1200,width=1200)
 par(oma=c(1,1,1,1))
 par(mar=c(4,3,1,1))
@@ -337,7 +338,7 @@ holdout[,mean_pair := apply(.SD,FUN=mean,MARGIN=1),.SDcols=c('vo2_max','pclr_bas
 holdout[,diff_pair := vo2 - pclr_basic_fitted]
 setkey(holdout,mean_pair)
 
-png('/data/arrhythmia/skhurshid/vo2/ba_vo2_pclr_basic.png',pointsize=6,res=300,
+png('ba_vo2_pclr_basic.png',pointsize=6,res=300,
     height=1200,width=1200)
 par(oma=c(1,1,1,1))
 par(mar=c(4,3,1,1))
@@ -385,7 +386,7 @@ ggplot() + geom_density(data=data,aes(x=value,fill=L1),alpha=0.55) +
         axis.title.y = element_text(size=20,margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(size=20),legend.text=element_text(size=20)) +
   labs(x='Peak VO2 (mL/kg/min)',y='Density') 
-ggsave('/data/arrhythmia/skhurshid/vo2/ecg_basic_density_vo2_max_compare.pdf',
+ggsave('ecg_basic_density_vo2_max_compare.pdf',
        height=2,width=2.5,units='in',scale=4)
 
 ### PCLR BASIC
@@ -402,7 +403,7 @@ ggplot() + geom_density(data=data,aes(x=value,fill=L1),alpha=0.55) +
         axis.title.y = element_text(size=20,margin = margin(t = 0, r = 10, b = 0, l = 0)),
         axis.title.x = element_text(size=20),legend.text=element_text(size=20)) +
   labs(x='Peak VO2 (mL/kg/min)',y='Density') 
-ggsave('/data/arrhythmia/skhurshid/vo2/pclr_basic_density_vo2_max_compare.pdf',
+ggsave('pclr_basic_density_vo2_max_compare.pdf',
        height=2,width=2.5,units='in',scale=4)
 
 # Sens/spec cutoff
